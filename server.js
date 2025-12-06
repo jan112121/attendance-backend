@@ -63,6 +63,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.get("/", (req, res) => res.send("Server is running ✅"));
 
 // ------------------- Start server -------------------
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // Parse JSON and URL-encoded bodies
@@ -94,7 +95,6 @@ app.get("/", (req, res) => res.send("Server is running ✅"));
 // ---------------------------
 // Database Sync & Server Start
 // ---------------------------
-const PORT = process.env.PORT || 5000;
 
 sequelize
   .sync({ alter: true })
