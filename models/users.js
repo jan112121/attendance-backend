@@ -11,7 +11,7 @@ const User = sequelize.define('User', {
   first_name: { type: DataTypes.STRING, allowNull: false, defaultValue: ''},
   last_name: { type: DataTypes.STRING, allowNull: false, defaultValue: ''},
   email: { type: DataTypes.STRING, allowNull: false, unique: true },
-  password: { type: DataTypes.STRING, allowNull: true },
+  password: { type: DataTypes.STRING, allowNull: false },
   role_id: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
   student_number: { type: DataTypes.STRING, allowNull: true },
   section: { type: DataTypes.STRING, allowNull: true },
