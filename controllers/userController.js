@@ -8,6 +8,7 @@ import path from 'path';
 import Attendance from '../models/attendance.js';
 import AttendanceArchive from '../models/attendanceArchive.js';
 import Penalty from '../models/penalties.js';
+import { cloudinary } from '../utils/cloudinary.js';
 
 // 🧭 Helper to safely delete a file if it exists
 const safeDeleteFile = (filePath) => {
@@ -155,28 +156,41 @@ export const addUser = async (req, res) => {
   try {
     const { first_name, last_name, email, student_number, role_id, contact_number, password } = req.body;
 
+    // Check if email already exists
     const existing = await User.findOne({ where: { email } });
-    if (existing) return res.status(400).json({ message: 'Email already exists' });
+    if (existing) return res.status(400).json({ message: "Email already exists" });
 
+    // Hash password
     const hashed = await bcrypt.hash(password, 10);
+
+    // Aztec code data
     const aztecData = student_number || email;
 
+    // Generate Aztec code PNG buffer
     const pngBuffer = await BwipJs.toBuffer({
-      bcid: 'azteccode',
+      bcid: "azteccode",
       text: aztecData,
       scale: 5,
       height: 10,
       includetext: false,
     });
 
-    const fileName = `${aztecData}_aztec.png`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'aztec_codes');
-    fs.mkdirSync(uploadDir, { recursive: true });
-    const filePath = path.join(uploadDir, fileName);
-    fs.writeFileSync(filePath, pngBuffer);
+    // Temporarily save buffer to a file (required by Cloudinary uploader)
+    const tempFilePath = `./tmp/${aztecData}_aztec.png`;
+    fs.mkdirSync(path.join(process.cwd(), "tmp"), { recursive: true });
+    fs.writeFileSync(tempFilePath, pngBuffer);
 
-    const aztecImagePath = `/uploads/aztec_codes/${fileName}`;
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(tempFilePath, {
+      folder: "aztec_codes",      // folder in Cloudinary
+      public_id: aztecData,       // optional: name the file by student_number/email
+      overwrite: true,
+    });
 
+    // Remove temporary file
+    fs.unlinkSync(tempFilePath);
+
+    // Create user with Cloudinary URL for aztec_code_image
     const newUser = await User.create({
       first_name,
       last_name,
@@ -186,15 +200,15 @@ export const addUser = async (req, res) => {
       contact_number,
       password: hashed,
       aztec_code: aztecData,
-      aztec_code_image: aztecImagePath,
+      aztec_code_image: result.secure_url, // store cloud URL
     });
 
     res.status(201).json({
-      message: 'User created successfully',
+      message: "User created successfully",
       user: newUser,
     });
   } catch (err) {
-    console.error('❌ Error adding user:', err);
-    res.status(500).json({ message: 'Server error while adding user' });
+    console.error("❌ Error adding user:", err);
+    res.status(500).json({ message: "Server error while adding user" });
   }
 };
