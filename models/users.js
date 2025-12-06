@@ -2,7 +2,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 import Grade from './Levels/grades.model.js';
-import Role from './roles.js';
+import Role from './Roles.js';
 import fs from 'fs';
 import MasterList from './masterList.js'
 
