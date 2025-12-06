@@ -33,19 +33,21 @@ const app = express();
 
 // Enable CORS
 const allowedOrigins = [
-  "http://localhost:4200", 
-  'http://localhost:3000',  // your frontend serve URL
-  'http://127.0.0.1:3000', // optional// Angular dev server
-  'https://attendance-backend-production-2893.up.railway.app',
-  'https://effervescent-torte-e1e84c.netlify.app',
-  process.env.FRONTEND_URL, // Add your deployed frontend URL in .env
+  "http://localhost:4200",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "https://attendance-frontend-p3e5-2axnbj42d.vercel.app", // if using vercel
+  "https://effervescent-torte-e1e84c.netlify.app", // Netlify frontend
+  process.env.FRONTEND_URL, // optional, for env var
 ];
+
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) callback(null, true);
       else callback(new Error("CORS not allowed"));
     },
+    credentials: true, // needed if you send cookies
   })
 );
 
