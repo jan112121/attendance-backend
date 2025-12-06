@@ -29,25 +29,41 @@ const app = express();
 // Middleware
 // ---------------------------
 
-// Allowed frontend URLs
+// ------------------- CORS -------------------
 const allowedOrigins = [
   "http://localhost:4200",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
-  process.env.FRONTEND_URL, // Set in Railway / Vercel env
-  "https://attendance-frontend-p3e5-2axnbj42d.vercel.app", // Vercel prod
-  "https://effervescent-torte-e1e84c.netlify.app", // Netlify prod
+  "https://attendance-frontend-p3e5.vercel.app", // Vercel frontend
+  process.env.FRONTEND_URL, // optional for future use
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-      else callback(new Error("CORS not allowed"));
+      // allow requests with no origin (like Postman, curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        console.log("Blocked CORS request from:", origin);
+        return callback(new Error("CORS not allowed"));
+      }
     },
-    credentials: true,
+    credentials: true, // allow cookies / auth headers
   })
 );
+
+// ------------------- Body parsing -------------------
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// ------------------- Example test route -------------------
+app.get("/", (req, res) => res.send("Server is running ✅"));
+
+// ------------------- Start server -------------------
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // Parse JSON and URL-encoded bodies
 app.use(express.json({ limit: "10mb" }));
