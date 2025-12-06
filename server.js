@@ -33,7 +33,9 @@ const app = express();
 
 // Enable CORS
 const allowedOrigins = [
-  "http://localhost:4200", // Angular dev server
+  "http://localhost:4200", 
+  'http://localhost:3000',  // your frontend serve URL
+  'http://127.0.0.1:3000',  // optional// Angular dev server
   process.env.FRONTEND_URL, // Add your deployed frontend URL in .env
 ];
 app.use(
