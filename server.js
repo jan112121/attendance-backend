@@ -25,20 +25,18 @@ dotenv.config();
 
 const app = express();
 
-/**
- * ---------------------------
- * Middleware
- * ---------------------------
- */
+// ---------------------------
+// Middleware
+// ---------------------------
 
-// Enable CORS
+// Allowed frontend URLs
 const allowedOrigins = [
   "http://localhost:4200",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
-  "https://attendance-frontend-p3e5-2axnbj42d.vercel.app", // if using vercel
-  "https://effervescent-torte-e1e84c.netlify.app", // Netlify frontend
-  process.env.FRONTEND_URL, // optional, for env var
+  process.env.FRONTEND_URL, // Set in Railway / Vercel env
+  "https://attendance-frontend-p3e5-2axnbj42d.vercel.app", // Vercel prod
+  "https://effervescent-torte-e1e84c.netlify.app", // Netlify prod
 ];
 
 app.use(
@@ -47,21 +45,9 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) callback(null, true);
       else callback(new Error("CORS not allowed"));
     },
-    credentials: true, // needed if you send cookies
+    credentials: true,
   })
 );
-
-sequelize
-  .sync({ alter: true }) // <-- this creates tables if they don't exist
-  .then(() => {
-    console.log("Database synced");
-    app.listen(process.env.PORT || 8080, () => {
-      console.log(`Server running on port ${process.env.PORT || 8080}`);
-    });
-  })
-  .catch((err) => {
-    console.error("DB connection error:", err);
-  });
 
 // Parse JSON and URL-encoded bodies
 app.use(express.json({ limit: "10mb" }));
@@ -70,59 +56,38 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 // Serve uploaded files
 app.use("/uploads", express.static("public/uploads"));
 
-/**
- * ---------------------------
- * Routes
- * ---------------------------
- */
-
-// Student Dashboard
+// ---------------------------
+// Routes
+// ---------------------------
 app.use("/api/student-dashboard", studentDashboardRoutes);
-
-// Admin Dashboard
 app.use("/api/dashboard", dashboardDataRoutes);
-
-// Master List
 app.use("/api/master-list", masterListRoutes);
-
-// Archive Reports
 app.use("/api/archive-reports", archiveReportsRoutes);
-
-// School Levels, Grades, Sections
 app.use("/api/school-levels", levelRoutes);
 app.use("/api/grades", gradeRoutes);
 app.use("/api/sections", sectionRoutes);
-
-// Penalties
 app.use("/api/penalties", penaltyRoutes);
 app.use("/api/penalty-rules", penaltyRuleRoutes);
-
-// Users
 app.use("/api/users", userRoutes);
-
-// Authentication
 app.use("/api/auth", authRoutes);
-
-// Attendance
 app.use("/api/attendance", attendanceRoutes);
 
 // Test route
 app.get("/", (req, res) => res.send("Server is running ✅"));
 
-/**
- * ---------------------------
- * Database Sync
- * ---------------------------
- */
-sequelize
-  .sync()
-  .then(() => console.log("MySQL DB connected and tables synced"))
-  .catch((err) => console.error("DB connection error:", err));
-
-/**
- * ---------------------------
- * Start Server
- * ---------------------------
- */
+// ---------------------------
+// Database Sync & Server Start
+// ---------------------------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+sequelize
+  .sync({ alter: true })
+  .then(() => {
+    console.log("Database synced ✅");
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("DB connection error:", err);
+  });
