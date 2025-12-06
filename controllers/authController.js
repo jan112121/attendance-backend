@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import MasterList from '../models/masterList.js';
 import User from '../models/users.js';
+import  cloudinary  from '../utils/cloudinary.js';
 
 // REGISTER
 export const register = async (req, res) => {
@@ -24,22 +25,19 @@ export const register = async (req, res) => {
 
     // ✅ Check required fields
     if (!first_name || !last_name || !email || !password || !student_number) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
     // 1️⃣ Check if student_number exists in MasterList
     const validStudent = await MasterList.findOne({ where: { first_name, last_name, student_number } });
-
     if (!validStudent) {
-      return res.status(400).json({
-        message: '❌ Student not found in the official school list.',
-      });
+      return res.status(400).json({ message: "❌ Student not found in the official school list." });
     }
 
     // ✅ Check for existing user
     const existingUser = await User.findOne({ where: { email, student_number } });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ message: "User already exists" });
     }
 
     // ✅ Hash password
@@ -48,28 +46,30 @@ export const register = async (req, res) => {
     // ✅ Generate Aztec code text
     const aztecCodeValue = student_number || email;
 
-    // ✅ Create Aztec Code Image
+    // ✅ Create Aztec Code Image buffer
     const aztecPng = await bwipjs.toBuffer({
-      bcid: 'azteccode',
+      bcid: "azteccode",
       text: aztecCodeValue,
       scale: 5,
       height: 10,
       includetext: false,
     });
 
-    // ✅ Save Aztec PNG file in backend/public/uploads/aztec_codes/
-    const fileName = `${aztecCodeValue}_aztec.png`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'aztec_codes');
-    const filePath = path.join(uploadDir, fileName);
+    // ✅ Temporarily save buffer to a file (required by Cloudinary uploader)
+    const tmpDir = path.join(process.cwd(), "tmp");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const tmpFilePath = path.join(tmpDir, `${aztecCodeValue}_aztec.png`);
+    fs.writeFileSync(tmpFilePath, aztecPng);
 
-    // Ensure directory exists
-    fs.mkdirSync(uploadDir, { recursive: true });
+    // ✅ Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(tmpFilePath, {
+      folder: "aztec_codes",
+      public_id: aztecCodeValue,
+      overwrite: true,
+    });
 
-    // Write PNG file
-    fs.writeFileSync(filePath, aztecPng);
-
-    // ✅ Save relative path in DB (so frontend can load it)
-    const aztecImagePath = `/uploads/aztec_codes/${fileName}`;
+    // ✅ Remove temporary file
+    fs.unlinkSync(tmpFilePath);
 
     // ✅ Create new user record
     const user = await User.create({
@@ -84,29 +84,26 @@ export const register = async (req, res) => {
       room_number,
       contact_number,
       aztec_code: aztecCodeValue,
-      aztec_code_image: aztecImagePath,
+      aztec_code_image: result.secure_url, // Cloudinary URL
     });
 
     // ✅ Create JWT token
     const token = jwt.sign({ id: user.id, role_id: user.role_id }, process.env.JWT_SECRET, {
-      expiresIn: '1d',
+      expiresIn: "1d",
     });
-
-    // ✅ Return full backend URL for Angular
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-    const fullAztecImageUrl = `${backendUrl}${aztecImagePath}`;
 
     res.status(201).json({
-      message: 'Registration successful',
+      message: "Registration successful",
       user,
       token,
-      aztecImage: fullAztecImageUrl,
+      aztecImage: result.secure_url,
     });
   } catch (error) {
-    console.error('Register Error:', error);
-    res.status(500).json({ message: 'Server error during registration' });
+    console.error("Register Error:", error);
+    res.status(500).json({ message: "Server error during registration" });
   }
 };
+
 
 // LOGIN
 export const login = async (req, res) => {

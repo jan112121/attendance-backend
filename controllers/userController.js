@@ -8,7 +8,7 @@ import path from 'path';
 import Attendance from '../models/attendance.js';
 import AttendanceArchive from '../models/attendanceArchive.js';
 import Penalty from '../models/penalties.js';
-import { cloudinary } from '../utils/cloudinary.js';
+import  cloudinary  from '../utils/cloudinary.js';
 
 // 🧭 Helper to safely delete a file if it exists
 const safeDeleteFile = (filePath) => {
