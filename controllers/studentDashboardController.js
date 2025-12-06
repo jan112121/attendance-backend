@@ -29,13 +29,15 @@ export const getStudentDashboard = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    // Build full URL for aztec_code_image
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-    const aztecImageUrl = student.aztec_code_image
-      ? `${backendUrl}${student.aztec_code_image}`
-      : null;
+    // Determine the correct aztec_code_image URL
+    let aztecImageUrl = null;
+    if (student.aztec_code_image) {
+      aztecImageUrl = student.aztec_code_image.startsWith("http")
+        ? student.aztec_code_image // full Cloudinary URL
+        : `${process.env.BACKEND_URL || "http://localhost:5000"}${student.aztec_code_image}`;
+    }
 
-    // Flatten student object
+    // Flatten student object for dashboard
     const studentData = {
       id: student.id,
       first_name: student.first_name,
@@ -48,7 +50,7 @@ export const getStudentDashboard = async (req, res) => {
       room_number: student.master?.room_number || null
     };
 
-    // Attendance counts separated by session
+    // Attendance counts by session
     const sessions = ["morning", "afternoon"];
     const summary = {};
 
@@ -57,13 +59,13 @@ export const getStudentDashboard = async (req, res) => {
         Attendance.count({ where: { user_id: studentId, status: "present", session } }),
         Attendance.count({ where: { user_id: studentId, status: "late", session } }),
         Attendance.count({ where: { user_id: studentId, status: "absent", session } }),
-        Attendance.count({ where: { user_id: studentId, status: "penalty", session } }) // Add penalty count
+        Attendance.count({ where: { user_id: studentId, status: "penalty", session } })
       ]);
 
       summary[session] = { present, late, absent, penalty };
     }
 
-    // Send response
+    // Send the response
     res.json({
       success: true,
       student: studentData,
@@ -71,7 +73,8 @@ export const getStudentDashboard = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("Dashboard Error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
