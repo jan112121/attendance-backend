@@ -37,6 +37,7 @@ const allowedOrigins = [
   'http://localhost:3000',  // your frontend serve URL
   'http://127.0.0.1:3000', // optional// Angular dev server
   'https://attendance-backend-production-2893.up.railway.app',
+  'https://effervescent-torte-e1e84c.netlify.app',
   process.env.FRONTEND_URL, // Add your deployed frontend URL in .env
 ];
 app.use(
