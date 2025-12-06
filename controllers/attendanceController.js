@@ -231,7 +231,7 @@ export const getAllAttendance = async (req, res) => {
           name: `${r.User.first_name} ${r.User.last_name}`,
           student_number: r.User.student_number,
           grade: r.User.master?.grade_level || 'N/A',
-          section: r.master.section || 'N/A',
+          section: r.User.master?.section || 'N/A',
           penalties: r.User.Penalties || [],
         },
       };

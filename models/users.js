@@ -37,7 +37,9 @@ User.belongsTo(Grade, { foreignKey: 'grade_id' });
 User.belongsTo(MasterList,{
   foreignKey: 'student_number',
   targetKey: 'student_number',
-  as: 'master'
+  as: 'master',
+  onDelete: 'SET NULL',
+  onUpdate: 'CASCADE'
 })
 
 Grade.hasMany(User, { foreignKey: 'grade_id' });
