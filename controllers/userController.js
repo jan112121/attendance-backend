@@ -1,5 +1,5 @@
 import User from '../models/users.js';
-import Role from '../models/Roles.js';
+import Role from '../models/roles.js';
 import Grade from '../models/Levels/grades.model.js';
 import bcrypt from 'bcryptjs';
 import BwipJs from 'bwip-js';

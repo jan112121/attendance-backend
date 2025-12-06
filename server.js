@@ -35,7 +35,8 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:4200", 
   'http://localhost:3000',  // your frontend serve URL
-  'http://127.0.0.1:3000',  // optional// Angular dev server
+  'http://127.0.0.1:3000', // optional// Angular dev server
+  'https://attendance-backend-production-2893.up.railway.app',
   process.env.FRONTEND_URL, // Add your deployed frontend URL in .env
 ];
 app.use(

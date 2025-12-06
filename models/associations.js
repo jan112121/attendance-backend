@@ -3,7 +3,7 @@ import User from './users.js';
 import Attendance from './attendance.js';
 import AttendanceArchive from './attendanceArchive.js';
 import Grade from './Levels/grades.model.js';
-import Role from './Roles.js';
+import Role from './roles.js';
 
 // Roles & Grades
 User.belongsTo(Role, { foreignKey: 'role_id' });
