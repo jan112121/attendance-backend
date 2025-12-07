@@ -7,7 +7,7 @@ import AttendanceArchive from '../models/attendanceArchive.js';
 import MasterList from '../models/masterList.js';
 import Penalties from '../models/penalties.js';
 import PenaltyRules from '../models/penaltyRules.js';
-import { sendEmailNotification } from './mailer';
+import { sendEmailNotification } from './mailer.js';
 import sequelize from '../config/db.js';
 
 /** Helper: Get current PH date */
