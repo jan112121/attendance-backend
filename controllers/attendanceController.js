@@ -16,10 +16,6 @@ const renderTemplate = (templateString, data) => {
   );
 };
 
-// Send email using template key
-import { EmailTemplate } from "./models/EmailTemplate.js";
-import { sendEmailNotification } from "./mailer.js"; // the updated function above
-
 // Send email using template key from DB
 export const sendTemplateEmail = async (templateKey, to, data) => {
   try {
