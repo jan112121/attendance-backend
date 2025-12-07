@@ -6,8 +6,7 @@ import PenaltyRules from '../models/penaltyRules.js';
 import moment from 'moment-timezone';
 import MasterList from '../models/masterList.js';
 import EmailTemplate from '../models/emailTemplates.js';
-import { sendEmailNotification } from '../utils/email.js';
-import { applyPenalty } from './penaltyController.js';
+import { sendEmailNotification } from '../utils/mailer.js';
 
 // Helper to render templates
 const renderTemplate = (templateString, data) => {
@@ -50,32 +49,28 @@ export const verifyAttendance = async (req, res) => {
     const time = now.format('HH:mm:ss');
     const hours = now.hour() + now.minute() / 60;
 
-    // 🌞 Determine session
-    let session = '', lateThreshold = 0, timeOutStart = 0, sessionEnd = 0;
-    if (hours >= 6 && hours < 12) {
-      session = 'morning';
-      lateThreshold = 7;       // 7 AM
-      timeOutStart = 11.5;     // 11:30 AM
-      sessionEnd = 12;
-    } else if (hours >= 12 && hours < 20) {
-      session = 'afternoon';
-      lateThreshold = 13;      // 1 PM
-      timeOutStart = 17.5;     // 5:30 PM
-      sessionEnd = 18;         // 6 PM
-    } else {
+    // ⏰ Only allow scanning between 6AM and 6PM
+    if (hours < 6 || hours >= 18) {
       return res.status(400).json({
         success: false,
-        message: 'Scanning allowed only between 6AM to 6PM.',
+        message: 'Scanning is allowed only between 6AM and 6PM.',
       });
     }
+
+    // 🌞 Determine session dynamically
+    let session = hours < 12 ? 'morning' : 'afternoon';
 
     // 🔁 Check existing attendance for today & session
     let attendance = await Attendance.findOne({ where: { user_id: user.id, date, session } });
 
     if (!attendance) {
-      // ⏰ Time-in
+      // ⏱ Time-in
       let status = 'present';
-      if (session === 'morning' && hours >= lateThreshold) status = 'late';
+
+      // Optional late logic
+      if ((session === 'morning' && hours >= 7) || (session === 'afternoon' && hours >= 13)) {
+        status = 'late';
+      }
 
       attendance = await Attendance.create({
         user_id: user.id,
@@ -86,7 +81,7 @@ export const verifyAttendance = async (req, res) => {
         created_at: now.toDate(),
       });
 
-      // 💸 Apply penalty for late morning only
+      // 💸 Apply late penalty if applicable
       if (status === 'late') {
         const lateRule = await PenaltyRules.findOne({ where: { condition: 'late' } });
         const penaltyAmount = lateRule ? lateRule.amount : 5;
@@ -108,10 +103,9 @@ export const verifyAttendance = async (req, res) => {
         }
       }
 
-      // 📧 Send email notification to master list email or fallback to user email
+      // 📧 Send email notification
       const recipientEmail = user.master?.parent_email || user.email;
       const templateKey = status === 'late' ? 'late_notification' : 'present_notification';
-
       await sendTemplateEmail(templateKey, recipientEmail, {
         student_name: `${user.first_name} ${user.last_name}`,
         session,
@@ -137,12 +131,12 @@ export const verifyAttendance = async (req, res) => {
       });
     }
 
-    // ⏱ Time-out
-    if (!attendance.time_out && hours >= timeOutStart) {
+    // ⏱ Time-out (allowed anytime after time-in within 6AM–6PM)
+    if (!attendance.time_out) {
       attendance.time_out = time;
       await attendance.save();
 
-      const recipientEmail = user.master?.email || user.email;
+      const recipientEmail = user.master?.parent_email || user.email;
       await sendTemplateEmail('time_out_notification', recipientEmail, {
         name: `${user.first_name} ${user.last_name}`,
         session,
@@ -165,14 +159,6 @@ export const verifyAttendance = async (req, res) => {
           time: attendance.time,
           time_out: attendance.time_out,
         },
-      });
-    }
-
-    // Too early to scan out
-    if (!attendance.time_out && hours < timeOutStart) {
-      return res.status(400).json({
-        success: false,
-        message: `It's too early to scan out for ${session} session.`,
       });
     }
 
