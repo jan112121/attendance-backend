@@ -139,37 +139,28 @@ export const markPenaltyAsPaid = async (req, res) => {
  * @param {string} session - 'morning' or 'afternoon'
  */
 export const applyPenalty = async (userId, session) => {
-  // Only apply for morning session
   if (session !== 'morning') return;
 
   const today = moment().tz('Asia/Manila').format('YYYY-MM-DD');
 
-  // ✅ Check if the student already has a late attendance today
   const alreadyLateToday = await Attendance.findOne({
     where: { user_id: userId, date: today, session, status: 'late' }
   });
 
-  if (!alreadyLateToday) {
-    // No late today → do nothing
-    return;
-  }
+  if (!alreadyLateToday) return;
 
-  // Get penalty amount from rules
   const rules = await PenaltyRules.findAll();
   const lateRule = rules.find(r => r.condition.toLowerCase() === 'late');
-  const penaltyAmount = lateRule ? lateRule.amount : 5;
+  const penaltyAmount = lateRule ? parseFloat(lateRule.amount) : 5.00;
 
-  // Check for existing unpaid penalty
   const existingPenalty = await Penalties.findOne({
     where: { user_id: userId, reason: 'Late Arrival', status: 'unpaid' }
   });
 
   if (existingPenalty) {
-    // Stack amount and round properly in Pesos
     existingPenalty.amount = Number((existingPenalty.amount + penaltyAmount).toFixed(2));
     await existingPenalty.save();
   } else {
-    // Create new penalty
     await Penalties.create({
       user_id: userId,
       reason: 'Late Arrival',
@@ -178,3 +169,4 @@ export const applyPenalty = async (userId, session) => {
     });
   }
 };
+
