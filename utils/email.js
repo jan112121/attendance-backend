@@ -3,26 +3,23 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Create Gmail transporter
+// Create SendGrid transporter
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.sendgrid.net',
+  port: 587,        // TLS
+  secure: false,    // false for port 587
   auth: {
-    user: process.env.EMAIL_USER, // your Gmail
-    pass: process.env.EMAIL_PASS, // Gmail App Password
+    user: 'apikey',                 // literally 'apikey'
+    pass: process.env.SENDGRID_API_KEY,
   },
-  port: 465,      // SSL
-  secure: true,   // true for SSL
-  connectionTimeout: 20000,
-  greetingTimeout: 20000,
-  socketTimeout: 20000,
 });
 
 // Verify SMTP connection
 transporter.verify((error, success) => {
   if (error) {
-    console.error('Gmail SMTP Connection Error:', error);
+    console.error('SendGrid SMTP Connection Error:', error);
   } else {
-    console.log('Gmail SMTP is ready to send emails');
+    console.log('SendGrid SMTP is ready');
   }
 });
 
@@ -30,13 +27,13 @@ transporter.verify((error, success) => {
 export async function sendEmailNotification(to, subject, message) {
   try {
     await transporter.sendMail({
-      from: `"Attendance System" <${process.env.EMAIL_USER}>`,
+      from: `"Attendance System" <${process.env.EMAIL_FROM}>`,
       to,
       subject,
       html: message,
     });
     console.log(`Email sent to ${to}`);
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Error sending email via SendGrid:', error);
   }
 }
