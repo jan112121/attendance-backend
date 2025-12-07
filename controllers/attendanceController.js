@@ -47,7 +47,7 @@ export const verifyAttendance = async (req, res) => {
         .status(400)
         .json({ success: false, message: "No Aztec code provided." });
 
-    // 🔍 Find user with grade info and master list email
+    // Find user with grade & master list info
     const user = await User.findOne({
       where: { aztec_code: aztecData },
       include: [
@@ -66,7 +66,7 @@ export const verifyAttendance = async (req, res) => {
     const time = now.format("HH:mm:ss");
     const hours = now.hour() + now.minute() / 60;
 
-    // ⏰ Only allow scanning between 6AM and 6PM
+    // Allow scanning only 6AM–6PM
     if (hours < 6 || hours >= 18) {
       return res.status(400).json({
         success: false,
@@ -74,23 +74,18 @@ export const verifyAttendance = async (req, res) => {
       });
     }
 
-    // 🌞 Determine session dynamically
-    let session = hours < 12 ? "morning" : "afternoon";
+    // Determine session dynamically
+    const session = hours < 12 ? "morning" : "afternoon";
 
-    // 🔁 Check existing attendance for today & session
+    // Check existing attendance for today & session
     let attendance = await Attendance.findOne({
       where: { user_id: user.id, date, session },
     });
 
     if (!attendance) {
-      // ⏱ Time-in
+      // Time-in
       let status = "present";
-
-      // Optional late logic
-      if (
-        (session === "morning" && hours >= 7) ||
-        (session === "afternoon" && hours >= 13)
-      ) {
+      if ((session === "morning" && hours >= 7) || (session === "afternoon" && hours >= 13)) {
         status = "late";
       }
 
@@ -103,11 +98,9 @@ export const verifyAttendance = async (req, res) => {
         created_at: now.toDate(),
       });
 
-      // 💸 Apply late penalty if applicable
+      // Apply late penalty if applicable
       if (status === "late") {
-        const lateRule = await PenaltyRules.findOne({
-          where: { condition: "late" },
-        });
+        const lateRule = await PenaltyRules.findOne({ where: { condition: "late" } });
         const penaltyAmount = lateRule ? lateRule.amount : 5;
 
         const existingPenalty = await Penalties.findOne({
@@ -127,10 +120,9 @@ export const verifyAttendance = async (req, res) => {
         }
       }
 
-      // 📧 Send email notification
+      // Send time-in email
       const recipientEmail = user.master?.parent_email || user.email;
-      const templateKey =
-        status === "late" ? "late_notification" : "present_notification";
+      const templateKey = status === "late" ? "late_notification" : "present_notification";
       await sendTemplateEmail(templateKey, recipientEmail, {
         student_name: `${user.first_name} ${user.last_name}`,
         session,
@@ -156,14 +148,32 @@ export const verifyAttendance = async (req, res) => {
       });
     }
 
-    // ⏱ Time-out (allowed anytime after time-in within 6AM–6PM)
+    // Time-out logic
     if (!attendance.time_out) {
+      const sessionEndTime = session === "morning" ? 11.5 : 17.5; // 11:30AM / 5:30PM
+      const recipientEmail = user.master?.parent_email || user.email;
+
+      if (hours < sessionEndTime) {
+        // Send early time-out email
+        await sendTemplateEmail("early_timeout_notification", recipientEmail, {
+          student_name: `${user.first_name} ${user.last_name}`,
+          session,
+          date,
+          time,
+        });
+
+        return res.status(400).json({
+          success: false,
+          message: `It's too early to scan out for ${session} session.`,
+        });
+      }
+
+      // Normal time-out
       attendance.time_out = time;
       await attendance.save();
 
-      const recipientEmail = user.master?.parent_email || user.email;
       await sendTemplateEmail("time_out_notification", recipientEmail, {
-        name: `${user.first_name} ${user.last_name}`,
+        student_name: `${user.first_name} ${user.last_name}`,
         session,
         date,
         time: attendance.time_out,
