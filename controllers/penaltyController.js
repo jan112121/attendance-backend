@@ -116,7 +116,7 @@ export const markPenaltyAsPaid = async (req, res) => {
     const { id } = req.params;
 
     const penalty = await Penalties.findByPk(id, {
-      include: [{ model: Users, attributes: ['name', 'email'] }],
+      include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }],
     });
 
     if (!penalty) return res.status(404).json({ error: 'Penalty not found' });
@@ -125,13 +125,14 @@ export const markPenaltyAsPaid = async (req, res) => {
     penalty.amount = 0; // reset to 0 after payment
     await penalty.save();
 
-    // (Optional) audit log or email notification can go here later
+    // Optional: audit log or email notification can go here later
     res.json({ message: `✅ Penalty #${id} marked as paid`, penalty });
   } catch (err) {
     console.error('❌ Error marking penalty as paid:', err);
     res.status(500).json({ error: 'Failed to update penalty status' });
   }
 };
+
 
 /**
  * Apply morning late penalty
