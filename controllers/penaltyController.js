@@ -116,7 +116,7 @@ export const markPenaltyAsPaid = async (req, res) => {
     const { id } = req.params;
 
     const penalty = await Penalties.findByPk(id, {
-      include: [{ model: User, attributes: ['first_name', 'last_name', 'email'] }],
+      include: [{ model: Users, attributes: ['first_name', 'last_name', 'email'] }],
     });
 
     if (!penalty) return res.status(404).json({ error: 'Penalty not found' });
