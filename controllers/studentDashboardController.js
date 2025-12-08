@@ -2,6 +2,7 @@ import User from "../models/users.js";
 import Attendance from "../models/attendance.js";
 import Grade from "../models/Levels/grades.model.js";
 import Masterlist from "../models/masterList.js";
+import Penalties from "../models/penalties.js";
 
 export const getStudentDashboard = async (req, res) => {
   try {
@@ -18,11 +19,12 @@ export const getStudentDashboard = async (req, res) => {
             {
               model: Grade,
               as: "grade",
-              attributes: ["grade_name"]
-            }
-          ]
-        }
-      ]
+              attributes: ["grade_name"],
+            },
+          ],
+        },
+        { model: Penalties, attributes: ["id", "reason", "amount", "status"] },
+      ],
     });
 
     if (!student) {
@@ -33,8 +35,10 @@ export const getStudentDashboard = async (req, res) => {
     let aztecImageUrl = null;
     if (student.aztec_code_image) {
       aztecImageUrl = student.aztec_code_image.startsWith("http")
-        ? student.aztec_code_image // full Cloudinary URL
-        : `${process.env.BACKEND_URL || "http://localhost:5000"}${student.aztec_code_image}`;
+        ? student.aztec_code_image
+        : `${process.env.BACKEND_URL || "http://localhost:5000"}${
+            student.aztec_code_image
+          }`;
     }
 
     // Flatten student object for dashboard
@@ -42,12 +46,13 @@ export const getStudentDashboard = async (req, res) => {
       id: student.id,
       first_name: student.first_name,
       last_name: student.last_name,
-      student_number: student.student_number || student.master?.student_number || null,
+      student_number:
+        student.student_number || student.master?.student_number || null,
       aztec_code: student.aztec_code,
       aztec_code_image: aztecImageUrl,
       grade: student.master?.grade?.grade_name || null,
       section: student.master?.section || null,
-      room_number: student.master?.room_number || null
+      room_number: student.master?.room_number || null,
     };
 
     // Attendance counts by session
@@ -55,21 +60,35 @@ export const getStudentDashboard = async (req, res) => {
     const summary = {};
 
     for (const session of sessions) {
-      const [present, late, absent, penalty] = await Promise.all([
-        Attendance.count({ where: { user_id: studentId, status: "present", session } }),
-        Attendance.count({ where: { user_id: studentId, status: "late", session } }),
-        Attendance.count({ where: { user_id: studentId, status: "absent", session } }),
-        Attendance.count({ where: { user_id: studentId, status: "penalty", session } })
+      const [present, late, absent] = await Promise.all([
+        Attendance.count({
+          where: { user_id: studentId, status: "present", session },
+        }),
+        Attendance.count({
+          where: { user_id: studentId, status: "late", session },
+        }),
+        Attendance.count({
+          where: { user_id: studentId, status: "absent", session },
+        }),
       ]);
 
-      summary[session] = { present, late, absent, penalty };
+      summary[session] = { present, late, absent };
     }
 
-    // Send the response
+    // Total unpaid penalties
+    const totalUnpaidPenalty =
+      (await Penalties.sum("amount", {
+        where: { user_id: studentId, status: "unpaid" },
+      })) || 0;
+
+    // Send final response once
     res.json({
       success: true,
       student: studentData,
-      summary
+      summary,
+      penalties: {
+        unpaid_total: totalUnpaidPenalty,
+      },
     });
 
   } catch (err) {
@@ -77,4 +96,3 @@ export const getStudentDashboard = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
