@@ -29,19 +29,19 @@ const app = express();
 // Middleware
 // ---------------------------
 
-// Allowed origins
+// ------------------- CORS -------------------
 const allowedOrigins = [
-  "http://localhost:4200", // Angular dev
-  "http://localhost:3000", // Other local dev
-  "http://127.0.0.1:3000", // Local IP
-  "https://attendance-frontend-p3e5.vercel.app", // old Vercel preview (optional)
-  process.env.FRONTEND_URL || "https://aztecscan.site", // live frontend or env var
+  "http://localhost:4200",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "https://attendance-frontend-p3e5.vercel.app", // Vercel frontend
+  process.env.FRONTEND_URL, // optional for future use
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (Postman, curl)
+      // allow requests with no origin (like Postman, curl)
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
@@ -52,12 +52,8 @@ app.use(
       }
     },
     credentials: true, // allow cookies / auth headers
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-
-// ------------------- End CORS -------------------
 
 // ------------------- Body parsing -------------------
 app.use(express.json({ limit: "10mb" }));
