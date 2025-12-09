@@ -22,60 +22,46 @@ import "./utils/cronJobs.js";
 import "./models/associations.js";
 
 dotenv.config();
-
 const app = express();
 
 // ---------------------------
-// Middleware
+// CORS
 // ---------------------------
-
-// Allowed origins
 const allowedOrigins = [
-  "http://localhost:4200", // Angular dev
-  "http://localhost:3000", // Other local dev
-  "http://127.0.0.1:3000", // Local IP
-  "https://attendance-frontend-p3e5.vercel.app", // old Vercel preview (optional)
-  process.env.FRONTEND_URL || "https://aztecscan.site", // live frontend or env var
+  "http://localhost:4200",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "https://attendance-frontend-p3e5.vercel.app",
+  process.env.FRONTEND_URL || "https://aztecscan.site",
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (Postman, curl)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        console.log("Blocked CORS request from:", origin);
-        return callback(new Error("CORS not allowed"));
-      }
+      if (!origin) return callback(null, true); // Postman / curl
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      console.log("Blocked CORS request from:", origin);
+      return callback(new Error("CORS not allowed"));
     },
-    credentials: true, // allow cookies / auth headers
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
 
-// ------------------- End CORS -------------------
+// Handle preflight OPTIONS requests
+app.options("*", cors({ origin: allowedOrigins, credentials: true }));
 
-// ------------------- Body parsing -------------------
+// ---------------------------
+// Body Parsing
+// ---------------------------
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// ------------------- Example test route -------------------
+// ---------------------------
+// Test Route
+// ---------------------------
 app.get("/", (req, res) => res.send("Server is running ✅"));
-
-// ------------------- Start server -------------------
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-// Parse JSON and URL-encoded bodies
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ limit: "10mb", extended: true }));
-
-// Serve uploaded files
-app.use("/uploads", express.static("public/uploads"));
 
 // ---------------------------
 // Routes
@@ -93,21 +79,20 @@ app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/attendance", attendanceRoutes);
 
-// Test route
-app.get("/", (req, res) => res.send("Server is running ✅"));
+// ---------------------------
+// Serve Uploaded Files
+// ---------------------------
+app.use("/uploads", express.static("public/uploads"));
 
 // ---------------------------
 // Database Sync & Server Start
 // ---------------------------
+const PORT = process.env.PORT || 5000;
 
 sequelize
   .sync({ alter: true })
   .then(() => {
     console.log("Database synced ✅");
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
-  .catch((err) => {
-    console.error("DB connection error:", err);
-  });
+  .catch((err) => console.error("DB connection error:", err));
