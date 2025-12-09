@@ -34,7 +34,8 @@ const allowedOrigins = [
   "http://localhost:4200",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
-  "https://attendance-frontend-p3e5.vercel.app", // Vercel frontend
+  "https://attendance-frontend-p3e5.vercel.app",
+  "https://aztecscan.site", // Vercel frontend
   process.env.FRONTEND_URL, // optional for future use
 ];
 
