@@ -86,7 +86,7 @@ const checkSessionAttendance = async (session, cronTime) => {
         } else {
           console.warn(`⚠️ No parent email found for ${user.first_name} ${user.last_name}`);
         }
-      } else if (!attendance.time && !attendance.time_out) {
+      } else if (attendance.time && !attendance.time_out) {
         attendance.time_out = cronTime;
         await attendance.save();
         console.log(`⏰ Auto time_out set for ${user.first_name} (${session})`);
