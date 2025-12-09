@@ -36,7 +36,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
   "https://attendance-frontend-p3e5.vercel.app",
-  process.env.FRONTEND_URL
+  process.env.FRONTEND_URL // "https://aztecscan.site"
 ];
 
 app.use(cors({
@@ -50,9 +50,6 @@ app.use(cors({
   methods: ["GET","POST","PUT","DELETE","OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
-
-// Handle preflight OPTIONS requests
-app.options("*", cors({ origin: allowedOrigins, credentials: true }));
 
 // Body parsing
 app.use(express.json({ limit: "10mb" }));
@@ -87,7 +84,7 @@ app.get("*", (req, res) => {
 // Database Sync & Server Start
 // ---------------------------
 sequelize
-  .sync({ alter: true }) // Consider using `alter: false` in production to avoid issues
+  .sync({ alter: true }) // Use `alter: false` in production to avoid issues
   .then(() => {
     console.log("Database synced ✅");
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
