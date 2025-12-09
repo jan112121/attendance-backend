@@ -24,33 +24,27 @@ import "./models/associations.js";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 // ---------------------------
 // Middleware
 // ---------------------------
 
-// Allowed origins
+// CORS: allow only your frontend domain
 const allowedOrigins = [
-  "http://localhost:4200",
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  process.env.FRONTEND_URL || "https://aztecscan.site", // live frontend
+  process.env.FRONTEND_URL || "https://aztecscan.site"
 ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // Postman / curl
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      console.log("Blocked CORS request from:", origin);
-      return callback(new Error("CORS not allowed"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow Postman / curl
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    console.log("Blocked CORS request from:", origin);
+    return callback(new Error("CORS not allowed"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 // Body parsing
 app.use(express.json({ limit: "10mb" }));
@@ -75,25 +69,28 @@ app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/attendance", attendanceRoutes);
 
-// Example test route
+// Test route
 app.get("/", (req, res) => res.send("Server is running ✅"));
 
 // ---------------------------
-// Database Sync & Server Start
+// Start server after DB connection
 // ---------------------------
-const startServer = async () => {
+const PORT = process.env.PORT || 5000;
+
+async function startServer() {
   try {
-    await sequelize.sync({ alter: true });
-    console.log("Database synced ✅");
+    await sequelize.authenticate(); // test connection
+    console.log("Database connected ✅");
+
+    // DO NOT sync with alter in production
+    // await sequelize.sync(); // optional if you want to sync tables (no alter)
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      console.log(`Allowed frontend origin: ${process.env.FRONTEND_URL || "https://aztecscan.site"}`);
     });
   } catch (err) {
     console.error("DB connection error:", err);
-    process.exit(1); // stop if DB fails
   }
-};
+}
 
 startServer();
