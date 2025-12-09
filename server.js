@@ -97,7 +97,7 @@ app.get("/", (req, res) => res.send("Server is running ✅"));
 // ---------------------------
 
 sequelize
-  .sync({ alter: true })
+  .sync({ alter: false })
   .then(() => {
     console.log("Database synced ✅");
     app.listen(PORT, () => {
