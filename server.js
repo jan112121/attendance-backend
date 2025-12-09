@@ -23,20 +23,20 @@ import "./utils/cronJobs.js";
 import "./models/associations.js";
 
 dotenv.config();
-
 const app = express();
+const PORT = process.env.PORT || 5000;
 
 // ---------------------------
 // Middleware
 // ---------------------------
 
-// ------------------- CORS -------------------
+// CORS setup
 const allowedOrigins = [
   "http://localhost:4200",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
-  "https://attendance-frontend-p3e5.vercel.app", // Vercel frontend
-  process.env.FRONTEND_URL, // optional for future use
+  "https://attendance-frontend-p3e5.vercel.app",
+  process.env.FRONTEND_URL
 ];
 
 app.use(cors({
@@ -51,33 +51,18 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// Preflight handling
+// Handle preflight OPTIONS requests
+app.options("*", cors({ origin: allowedOrigins, credentials: true }));
 
-app.get("/:catchAll(*)", (req, res) => {
-  res.sendFile(path.resolve("public/index.html"));
-});
-
-
-// ------------------- Body parsing -------------------
+// Body parsing
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// ------------------- Example test route -------------------
-app.get("/", (req, res) => res.send("Server is running ✅"));
-
-// ------------------- Start server -------------------
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-// Parse JSON and URL-encoded bodies
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 // Serve uploaded files
 app.use("/uploads", express.static("public/uploads"));
 
 // ---------------------------
-// Routes
+// API Routes
 // ---------------------------
 app.use("/api/student-dashboard", studentDashboardRoutes);
 app.use("/api/dashboard", dashboardDataRoutes);
@@ -92,21 +77,19 @@ app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/attendance", attendanceRoutes);
 
-// Test route
-app.get("/", (req, res) => res.send("Server is running ✅"));
+// ---------------------------
+// SPA fallback (Angular)
+app.get("*", (req, res) => {
+  res.sendFile(path.resolve("public/index.html"));
+});
 
 // ---------------------------
 // Database Sync & Server Start
 // ---------------------------
-
 sequelize
-  .sync({ alter: true })
+  .sync({ alter: true }) // Consider using `alter: false` in production to avoid issues
   .then(() => {
     console.log("Database synced ✅");
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
-  .catch((err) => {
-    console.error("DB connection error:", err);
-  });
+  .catch(err => console.error("DB connection error:", err));
