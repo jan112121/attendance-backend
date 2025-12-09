@@ -46,7 +46,7 @@ if (process.env.FRONTEND_URL) {
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // Postman / curl requests
+    if (!origin) return callback(null, true); // Postman / curl
     if (allowedOrigins.includes(origin)) return callback(null, true);
     console.log("Blocked CORS request from:", origin);
     return callback(new Error("CORS not allowed"));
@@ -56,7 +56,6 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// ---------------------------
 // Body parsing
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -80,7 +79,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/attendance", attendanceRoutes);
 
 // ---------------------------
-// SPA fallback for Angular
+// SPA fallback (Angular)
 // Must come after API routes
 app.get("*", (req, res) => {
   res.sendFile(path.resolve("public/index.html"));
@@ -89,6 +88,7 @@ app.get("*", (req, res) => {
 // ---------------------------
 // Database Sync & Server Start
 const isProduction = process.env.NODE_ENV === "production";
+
 sequelize
   .sync({ alter: !isProduction }) // only auto-alter in dev
   .then(() => {
