@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import sequelize from "./config/db.js";
 import path from "path";
+import { fileURLToPath } from "url";
 
 // Routes
 import authRoutes from "./routes/auth.js";
@@ -23,48 +24,49 @@ import "./utils/cronJobs.js";
 import "./models/associations.js";
 
 dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ---------------------------
-// Middleware
+// CORS
 // ---------------------------
-
-// CORS setup
 const allowedOrigins = [
   "http://localhost:4200",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
-  "https://attendance-frontend-p3e5.vercel.app"
+  "https://attendance-frontend-p3e5.vercel.app", // preview
+  process.env.FRONTEND_URL || "https://aztecscan.site",
 ];
 
-// Add FRONTEND_URL if defined
-if (process.env.FRONTEND_URL) {
-  allowedOrigins.push(process.env.FRONTEND_URL);
-  console.log("Allowed frontend origin:", process.env.FRONTEND_URL);
-}
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // Postman, curl, etc
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      console.log("Blocked CORS request from:", origin);
+      return callback(new Error("CORS not allowed"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // Postman / curl
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    console.log("Blocked CORS request from:", origin);
-    return callback(new Error("CORS not allowed"));
-  },
-  credentials: true, // allow cookies / auth headers
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
-
+// ---------------------------
 // Body parsing
+// ---------------------------
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// ---------------------------
 // Serve uploaded files
+// ---------------------------
 app.use("/uploads", express.static("public/uploads"));
 
 // ---------------------------
 // API Routes
+// ---------------------------
 app.use("/api/student-dashboard", studentDashboardRoutes);
 app.use("/api/dashboard", dashboardDataRoutes);
 app.use("/api/master-list", masterListRoutes);
@@ -79,20 +81,33 @@ app.use("/api/auth", authRoutes);
 app.use("/api/attendance", attendanceRoutes);
 
 // ---------------------------
-// SPA fallback (Angular)
-// Must come after API routes
-app.get("*", (req, res) => {
-  res.sendFile(path.resolve("public/index.html"));
+// SPA fallback for frontend
+// ---------------------------
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get("/:catchAll(.*)", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
 // ---------------------------
-// Database Sync & Server Start
-const isProduction = process.env.NODE_ENV === "production";
+// Test route
+// ---------------------------
+app.get("/", (req, res) => res.send("Server is running ✅"));
 
+// ---------------------------
+// Database sync & server start
+// ---------------------------
 sequelize
-  .sync({ alter: !isProduction }) // only auto-alter in dev
+  .sync({ alter: true })
   .then(() => {
     console.log("Database synced ✅");
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
   })
-  .catch(err => console.error("DB connection error:", err));
+  .catch((err) => {
+    console.error("DB connection error:", err);
+  });
