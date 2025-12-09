@@ -2,8 +2,6 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import sequelize from "./config/db.js";
-import path from "path";
-import { fileURLToPath } from "url";
 
 // Routes
 import authRoutes from "./routes/auth.js";
@@ -29,20 +27,21 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ---------------------------
-// CORS
+// Middleware
 // ---------------------------
+
+// Allowed origins
 const allowedOrigins = [
   "http://localhost:4200",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
-  "https://attendance-frontend-p3e5.vercel.app", // preview
-  process.env.FRONTEND_URL || "https://aztecscan.site",
+  process.env.FRONTEND_URL || "https://aztecscan.site", // live frontend
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // Postman, curl, etc
+      if (!origin) return callback(null, true); // Postman / curl
       if (allowedOrigins.includes(origin)) return callback(null, true);
       console.log("Blocked CORS request from:", origin);
       return callback(new Error("CORS not allowed"));
@@ -53,19 +52,15 @@ app.use(
   })
 );
 
-// ---------------------------
 // Body parsing
-// ---------------------------
 app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-// ---------------------------
 // Serve uploaded files
-// ---------------------------
 app.use("/uploads", express.static("public/uploads"));
 
 // ---------------------------
-// API Routes
+// Routes
 // ---------------------------
 app.use("/api/student-dashboard", studentDashboardRoutes);
 app.use("/api/dashboard", dashboardDataRoutes);
@@ -80,34 +75,25 @@ app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/attendance", attendanceRoutes);
 
-// ---------------------------
-// SPA fallback for frontend
-// ---------------------------
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-app.use(express.static(path.join(__dirname, "public")));
-
-app.get("/:catchAll(.*)", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
-});
-
-// ---------------------------
-// Test route
-// ---------------------------
+// Example test route
 app.get("/", (req, res) => res.send("Server is running ✅"));
 
 // ---------------------------
-// Database sync & server start
+// Database Sync & Server Start
 // ---------------------------
-sequelize
-  .sync({ alter: true })
-  .then(() => {
+const startServer = async () => {
+  try {
+    await sequelize.sync({ alter: true });
     console.log("Database synced ✅");
+
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      console.log(`Allowed frontend origin: ${process.env.FRONTEND_URL || "https://aztecscan.site"}`);
     });
-  })
-  .catch((err) => {
+  } catch (err) {
     console.error("DB connection error:", err);
-  });
+    process.exit(1); // stop if DB fails
+  }
+};
+
+startServer();
