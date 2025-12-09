@@ -38,22 +38,20 @@ const allowedOrigins = [
   process.env.FRONTEND_URL, // optional for future use
 ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // allow requests with no origin (like Postman, curl)
-      if (!origin) return callback(null, true);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // Postman / curl
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    console.log("Blocked CORS request from:", origin);
+    return callback(new Error("CORS not allowed"));
+  },
+  credentials: true,
+  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        console.log("Blocked CORS request from:", origin);
-        return callback(new Error("CORS not allowed"));
-      }
-    },
-    credentials: true, // allow cookies / auth headers
-  })
-);
+// Preflight handling
+app.options("*", cors({ origin: allowedOrigins, credentials: true }));
 
 // ------------------- Body parsing -------------------
 app.use(express.json({ limit: "10mb" }));
