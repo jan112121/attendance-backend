@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import sequelize from "./config/db.js";
+import path from "path";
 
 // Routes
 import authRoutes from "./routes/auth.js";
@@ -51,7 +52,11 @@ app.use(cors({
 }));
 
 // Preflight handling
-app.options("*", cors({ origin: allowedOrigins, credentials: true }));
+
+app.get("/:catchAll(*)", (req, res) => {
+  res.sendFile(path.resolve("public/index.html"));
+});
+
 
 // ------------------- Body parsing -------------------
 app.use(express.json({ limit: "10mb" }));
