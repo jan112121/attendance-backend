@@ -169,11 +169,16 @@ export const getMasterListCount = async (req, res) => {
 // 🗑️ Delete a specific record
 export const clearMasterList = async (req, res) => {
   try {
-    // This will delete all rows and reset the auto-increment counter
+    // Delete all rows safely without using TRUNCATE
     await MasterList.destroy({
-      where: {}, // no condition = delete all
-      truncate: true, // resets auto-increment IDs
+      where: {}, // delete all rows
+      truncate: false, // <- change this to false
     });
+
+    // Optional: reset auto-increment manually
+    await MasterList.sequelize.query(
+      'ALTER TABLE master_list AUTO_INCREMENT = 1'
+    );
 
     res.status(200).json({ message: 'Master list cleared successfully.' });
   } catch (error) {
@@ -181,6 +186,7 @@ export const clearMasterList = async (req, res) => {
     res.status(500).json({ message: 'Failed to clear master list.', error: error.message });
   }
 };
+
 
 // Bulk insert from JSON
 export const importFromJson = async (req, res) => {
